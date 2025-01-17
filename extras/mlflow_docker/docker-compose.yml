@@ -1,0 +1,62 @@
+version: '3.7'
+
+services:
+  mlflow_server:
+    image: mlflow_server
+    build:
+      context: .
+      dockerfile: Dockerfile.mlflow
+    container_name: mlflow_server
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./mlartifacts:/data
+    environment:
+      - MLFLOW_ARTIFACT_ROOT=${MLFLOW_ARTIFACT_ROOT}
+      - MLFLOW_TRACKING_USERNAME=${MLFLOW_TRACKING_USERNAME}
+      - MLFLOW_TRACKING_PASSWORD=${MLFLOW_TRACKING_PASSWORD}
+      - MLFLOW_TRACKING_URI=https://mlflow.${DOMAINNAME}
+      - MLFLOW_ARTIFACT_UPLOAD_DOWNLOAD_TIMEOUT=1800
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.mlflow.rule=Host(`mlflow.${DOMAINNAME}`)
+      - traefik.http.routers.mlflow.entrypoints=websecure
+      - traefik.http.routers.mlflow.tls=true
+      - traefik.http.routers.mlflow.tls.certresolver=letsencrypt
+      - traefik.docker.network=proxy
+    #command: [
+      #"mlflow", "server",
+      #"--backend-store-uri", "postgresql+psycopg2://mlflow:mlflow@mlflow_db:5432/mlflow",
+      #"--gunicorn-opts",
+      #"--log-level debug --timeout 900 --graceful-timeout 120",
+      #"--host", "0.0.0.0",
+      #"--app-name", "basic-auth",
+      #"--default-artifact-root", "mlflow-artifacts:/"
+      #"--serve-artifacts",
+      # "--artifacts-destination", "s3://${MLFLOW_BUCKET_NAME}",
+    #]
+   # depends_on:
+   #  - mlflow_db
+    networks:
+      - proxy
+      - internal
+
+#  mlflow_db:
+#    image: postgres:latest
+#    container_name: mlflow_db
+#    environment:
+#      POSTGRES_USER: mlflow
+#      POSTGRES_PASSWORD: mlflow
+#      POSTGRES_DB: mlflow
+#    volumes:
+#      - "./mlflow_db:/var/lib/postgresql/data"
+#    networks:
+#      - internal
+#      - db-connect
+
+networks:
+  proxy:
+    external: true
+  internal:
+  db-connect:
+    external: true
